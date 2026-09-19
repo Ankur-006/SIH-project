@@ -1,6 +1,6 @@
 /**
  * Digital Forensics & Incident Response (DFIR) Report Dossier
- * Comprehensive, professional cyber investigation document for SOC/IR teams,
+ * Comprehensive, professional cyber investigation document for Security & Incident Response teams,
  * compliance auditors, and digital forensics examiners.
  */
 

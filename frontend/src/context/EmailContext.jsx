@@ -26,6 +26,13 @@ const initialState = {
   analysisStep: '',
   error: null,
   backendConnected: false,
+  // Inbox connection state
+  inboxConnected: false,
+  inboxEmail: '',
+  inboxEmails: [],
+  inboxScanning: false,
+  inboxProgress: '',
+  inboxError: null,
 };
 
 function emailReducer(state, action) {
@@ -114,6 +121,44 @@ function emailReducer(state, action) {
         ...state,
         analyzedEmails: state.analyzedEmails.filter(e => e.id !== action.id),
         currentAnalysis: state.currentAnalysis?.id === action.id ? null : state.currentAnalysis,
+      };
+
+    // Inbox connection actions
+    case 'INBOX_SCANNING':
+      return { ...state, inboxScanning: true, inboxProgress: action.step || 'Connecting...', inboxError: null };
+
+    case 'INBOX_PROGRESS':
+      return { ...state, inboxProgress: action.step };
+
+    case 'INBOX_CONNECTED': {
+      const inboxResults = action.payload.results || [];
+      // Merge inbox emails into analyzedEmails (avoid duplicates)
+      const existingIds = new Set(state.analyzedEmails.map(e => e.id));
+      const newEmails = inboxResults.filter(e => !existingIds.has(e.id));
+      return {
+        ...state,
+        inboxConnected: true,
+        inboxEmail: action.payload.email || '',
+        inboxEmails: inboxResults,
+        inboxScanning: false,
+        inboxProgress: '',
+        inboxError: null,
+        analyzedEmails: [...newEmails, ...state.analyzedEmails],
+      };
+    }
+
+    case 'INBOX_ERROR':
+      return { ...state, inboxScanning: false, inboxProgress: '', inboxError: action.error };
+
+    case 'INBOX_DISCONNECT':
+      return {
+        ...state,
+        inboxConnected: false,
+        inboxEmail: '',
+        inboxEmails: [],
+        inboxScanning: false,
+        inboxProgress: '',
+        inboxError: null,
       };
 
     default:
@@ -284,6 +329,46 @@ export function EmailProvider({ children }) {
     dispatch({ type: 'DELETE_ANALYSIS', id: reportId });
   }, []);
 
+  const connectInbox = useCallback(async (email, password, imapServer, maxEmails = 30) => {
+    try {
+      dispatch({ type: 'INBOX_SCANNING', step: 'Connecting to email server...' });
+
+      const progressSteps = [
+        'Authenticating with IMAP server...',
+        'Fetching latest emails from inbox...',
+        'Running threat analysis on each email...',
+        'Calculating threat scores...',
+        'Finalizing security assessment...',
+      ];
+
+      let stepIdx = 0;
+      const progressInterval = setInterval(() => {
+        if (stepIdx < progressSteps.length) {
+          dispatch({ type: 'INBOX_PROGRESS', step: progressSteps[stepIdx] });
+          stepIdx++;
+        }
+      }, 2500);
+
+      try {
+        const result = await api.connectInbox(email, password, imapServer, maxEmails);
+        clearInterval(progressInterval);
+        dispatch({ type: 'INBOX_CONNECTED', payload: { ...result, email } });
+        return result;
+      } catch (err) {
+        clearInterval(progressInterval);
+        throw err;
+      }
+    } catch (error) {
+      const errMsg = error.message || 'Failed to connect to inbox';
+      dispatch({ type: 'INBOX_ERROR', error: errMsg });
+      throw error;
+    }
+  }, []);
+
+  const disconnectInbox = useCallback(() => {
+    dispatch({ type: 'INBOX_DISCONNECT' });
+  }, []);
+
   const value = {
     ...state,
     analyzeEmail,
@@ -292,6 +377,8 @@ export function EmailProvider({ children }) {
     deleteCase,
     addEmailToCase,
     deleteAnalysis,
+    connectInbox,
+    disconnectInbox,
     reloadFromDatabase,
     dispatch,
   };

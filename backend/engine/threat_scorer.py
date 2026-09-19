@@ -12,26 +12,43 @@ def calculate_threat_score(analysis_results: dict) -> dict:
     ip_results = analysis_results.get("ipResults", [])
     domain_result = analysis_results.get("domainResult", {})
 
+    raw_auth = auth_result.get("overallScore")
+    auth_threat = 100 - (raw_auth if raw_auth is not None else 20)
+
     scores = {
-        "authentication": 100 - (auth_result.get("overallScore") or 50),
+        "authentication": auth_threat,
         "nlp": nlp_result.get("nlpScore") or 0,
         "links": link_result.get("overallScore") or 0,
-        "headerAnomalies": min(100, len(header_anomalies) * 20),
+        "headerAnomalies": min(100, len(header_anomalies) * 25),
         "ipRisk": _calculate_aggregate_ip_risk(ip_results),
-        "domainRisk": 100 - (domain_result.get("reputationScore") or 50) if domain_result else 50,
+        "domainRisk": 100 - (domain_result.get("reputationScore") if domain_result and domain_result.get("reputationScore") is not None else 30),
     }
 
     weights = {
-        "authentication": 0.20,
+        "authentication": 0.25,
         "nlp": 0.30,
         "links": 0.15,
-        "headerAnomalies": 0.15,
-        "ipRisk": 0.10,
+        "headerAnomalies": 0.12,
+        "ipRisk": 0.08,
         "domainRisk": 0.10,
     }
 
     weighted_score = sum(scores[k] * weights[k] for k in weights)
-    threat_score = round(min(100, weighted_score))
+
+    # Convergence bonus: amplify when multiple signals are elevated
+    elevated = sum(1 for s in scores.values() if s > 40)
+    if elevated >= 4:
+        weighted_score = min(100, weighted_score * 1.35)
+    elif elevated >= 3:
+        weighted_score = min(100, weighted_score * 1.20)
+    elif elevated >= 2:
+        weighted_score = min(100, weighted_score * 1.10)
+
+    # Non-linear amplification for mid-range scores
+    if 15 < weighted_score < 85:
+        weighted_score = weighted_score + (weighted_score * 0.15)
+
+    threat_score = round(min(100, max(0, weighted_score)))
 
     classification = _classify_threat(threat_score, analysis_results)
     confidence = _calculate_confidence(scores)
@@ -53,7 +70,7 @@ def calculate_threat_score(analysis_results: dict) -> dict:
 
 def _calculate_aggregate_ip_risk(ip_results: list) -> int:
     if not ip_results:
-        return 20
+        return 35
     max_risk = 0
     for ip in ip_results:
         risk = 0
@@ -78,13 +95,13 @@ def _classify_threat(score: int, results: dict) -> str:
     imp_score = nlp.get("impersonation", {}).get("score", 0)
     phish_score = nlp.get("phishing", {}).get("score", 0)
 
-    if bec_score > 30 and score > 35:
+    if bec_score > 20 and score > 25:
         return "fraud"
-    if imp_score > 30 and score > 30:
+    if imp_score > 20 and score > 25:
         return "impersonation"
-    if phish_score > 40 and score > 35:
+    if phish_score > 25 and score > 25:
         return "phishing"
-    if score >= 65:
+    if score >= 60:
         return "phishing"
     if score >= 35:
         return "suspicious"

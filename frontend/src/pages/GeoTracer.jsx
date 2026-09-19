@@ -3,17 +3,31 @@
  * Full-page interactive map for IP geolocation tracing.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useEmail } from '../context/EmailContext';
 import WorldMap from '../components/WorldMap';
 import { lookupIP, getCountryFlag, calculateIPRiskScore } from '../engine/ipIntelligence';
 
 export default function GeoTracer() {
+  const [searchParams] = useSearchParams();
+  const urlIP = searchParams.get('ip') || searchParams.get('q') || '';
   const { currentAnalysis, analyzedEmails } = useEmail();
-  const [manualIP, setManualIP] = useState('');
+  const [manualIP, setManualIP] = useState(urlIP);
   const [manualResults, setManualResults] = useState([]);
   const [isLooking, setIsLooking] = useState(false);
   const [selectedIP, setSelectedIP] = useState(null);
+
+  useEffect(() => {
+    if (urlIP) {
+      (async () => {
+        setIsLooking(true);
+        const result = await lookupIP(urlIP.trim());
+        setManualResults([result]);
+        setIsLooking(false);
+      })();
+    }
+  }, [urlIP]);
 
   const ipResults = currentAnalysis?.ipResults || manualResults;
 
@@ -33,6 +47,7 @@ export default function GeoTracer() {
     setIsLooking(false);
     setManualIP('');
   };
+
 
   return (
     <div>

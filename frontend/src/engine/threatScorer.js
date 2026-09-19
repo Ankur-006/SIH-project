@@ -17,21 +17,25 @@ export function calculateThreatScore(analysisResults) {
   } = analysisResults;
 
   // Weight each analysis component
+  const rawAuthScore = authResult.overallScore;
+  // If auth score is missing/undefined, treat as highly suspicious (default 20 → inverts to 80)
+  const authThreat = 100 - (rawAuthScore != null ? rawAuthScore : 20);
+
   const scores = {
-    authentication: 100 - (authResult.overallScore || 50),   // Invert: low auth = high threat
+    authentication: authThreat,
     nlp: nlpResult.nlpScore || 0,
     links: linkResult.overallScore || 0,
-    headerAnomalies: Math.min(100, headerAnomalies.length * 20),
+    headerAnomalies: Math.min(100, headerAnomalies.length * 25),
     ipRisk: calculateAggregateIPRisk(ipResults),
-    domainRisk: 100 - (domainResult?.reputationScore || 50),  // Invert
+    domainRisk: 100 - (domainResult?.reputationScore ?? 30),  // Invert; default rep 30 → risk 70
   };
 
   const weights = {
-    authentication: 0.20,
+    authentication: 0.25,
     nlp: 0.30,
     links: 0.15,
-    headerAnomalies: 0.15,
-    ipRisk: 0.10,
+    headerAnomalies: 0.12,
+    ipRisk: 0.08,
     domainRisk: 0.10,
   };
 
@@ -40,7 +44,23 @@ export function calculateThreatScore(analysisResults) {
     weightedScore += (scores[key] || 0) * weight;
   }
 
-  const threatScore = Math.round(Math.min(100, weightedScore));
+  // Convergence bonus: when multiple signals are elevated, amplify the score
+  const elevatedSignals = Object.values(scores).filter(s => s > 40).length;
+  if (elevatedSignals >= 4) {
+    weightedScore = Math.min(100, weightedScore * 1.35);
+  } else if (elevatedSignals >= 3) {
+    weightedScore = Math.min(100, weightedScore * 1.20);
+  } else if (elevatedSignals >= 2) {
+    weightedScore = Math.min(100, weightedScore * 1.10);
+  }
+
+  // Non-linear amplification: push mid-range scores higher to avoid "everything looks low"
+  // Applies a gentle S-curve that lifts scores in the 20-65 band
+  if (weightedScore > 15 && weightedScore < 85) {
+    weightedScore = weightedScore + (weightedScore * 0.15);
+  }
+
+  const threatScore = Math.round(Math.min(100, Math.max(0, weightedScore)));
 
   // Determine classification
   const classification = classifyThreat(threatScore, analysisResults);
@@ -67,7 +87,7 @@ export function calculateThreatScore(analysisResults) {
  * Calculate aggregate IP risk from all IP results
  */
 function calculateAggregateIPRisk(ipResults) {
-  if (!ipResults || ipResults.length === 0) return 20;
+  if (!ipResults || ipResults.length === 0) return 35;
 
   let maxRisk = 0;
   for (const ip of ipResults) {
@@ -92,16 +112,16 @@ function calculateAggregateIPRisk(ipResults) {
  */
 function classifyThreat(score, results) {
   const nlp = results.nlpResult || {};
-  const hasBEC = nlp.bec?.score > 30;
-  const hasImpersonation = nlp.impersonation?.score > 30;
-  const hasPhishing = nlp.phishing?.score > 40;
+  const hasBEC = nlp.bec?.score > 20;
+  const hasImpersonation = nlp.impersonation?.score > 20;
+  const hasPhishing = nlp.phishing?.score > 25;
 
-  if (hasBEC && score > 35) return 'fraud';
-  if (hasImpersonation && score > 30) return 'impersonation';
-  if (hasPhishing && score > 35) return 'phishing';
-  if (score >= 65) return 'phishing';
-  if (score >= 40) return 'suspicious';
-  if (score >= 20) return 'suspicious';
+  if (hasBEC && score > 25) return 'fraud';
+  if (hasImpersonation && score > 25) return 'impersonation';
+  if (hasPhishing && score > 25) return 'phishing';
+  if (score >= 60) return 'phishing';
+  if (score >= 35) return 'suspicious';
+  if (score >= 18) return 'suspicious';
   return 'legitimate';
 }
 

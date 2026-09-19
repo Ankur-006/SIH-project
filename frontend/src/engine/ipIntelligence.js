@@ -7,37 +7,106 @@
  * Look up IP geolocation via ip-api.com
  */
 export async function lookupIP(ip) {
-  try {
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,asname,reverse,mobile,proxy,hosting,query`);
-    const data = await response.json();
-
-    if (data.status === 'success') {
-      return {
-        ip: data.query,
-        country: data.country,
-        countryCode: data.countryCode,
-        region: data.regionName,
-        city: data.city,
-        lat: data.lat,
-        lon: data.lon,
-        timezone: data.timezone,
-        isp: data.isp,
-        org: data.org,
-        as: data.as,
-        asName: data.asname,
-        reverse: data.reverse,
-        isMobile: data.mobile,
-        isProxy: data.proxy,
-        isHosting: data.hosting,
-        riskIndicators: assessIPRisk(data),
-        error: null,
-      };
-    } else {
-      return createFallbackResult(ip, data.message);
+  // Try multiple HTTPS geolocation APIs with fallback
+  const apis = [
+    {
+      url: `https://ipwho.is/${ip}`,
+      parse: (data) => {
+        if (!data.success && data.success !== undefined) return null;
+        return {
+          ip: data.ip || ip,
+          country: data.country || 'Unknown',
+          countryCode: data.country_code || 'XX',
+          region: data.region || 'Unknown',
+          city: data.city || 'Unknown',
+          lat: data.latitude,
+          lon: data.longitude,
+          timezone: data.timezone?.id || '',
+          isp: data.connection?.isp || 'Unknown',
+          org: data.connection?.org || data.connection?.isp || 'Unknown',
+          as: data.connection?.asn ? `AS${data.connection.asn}` : '',
+          asName: data.connection?.org || '',
+          reverse: '',
+          isMobile: false,
+          isProxy: data.security?.proxy || false,
+          isHosting: data.type === 'hosting' || false,
+        };
+      }
+    },
+    {
+      url: `https://ipapi.co/${ip}/json/`,
+      parse: (data) => {
+        if (data.error) return null;
+        return {
+          ip: data.ip || ip,
+          country: data.country_name || 'Unknown',
+          countryCode: data.country_code || 'XX',
+          region: data.region || 'Unknown',
+          city: data.city || 'Unknown',
+          lat: data.latitude,
+          lon: data.longitude,
+          timezone: data.timezone || '',
+          isp: data.org || 'Unknown',
+          org: data.org || 'Unknown',
+          as: data.asn || '',
+          asName: data.org || '',
+          reverse: '',
+          isMobile: false,
+          isProxy: false,
+          isHosting: data.org ? /host|cloud|server|datacenter/i.test(data.org) : false,
+        };
+      }
+    },
+    {
+      url: `http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,asname,reverse,mobile,proxy,hosting,query`,
+      parse: (data) => {
+        if (data.status !== 'success') return null;
+        return {
+          ip: data.query,
+          country: data.country,
+          countryCode: data.countryCode,
+          region: data.regionName,
+          city: data.city,
+          lat: data.lat,
+          lon: data.lon,
+          timezone: data.timezone,
+          isp: data.isp,
+          org: data.org,
+          as: data.as,
+          asName: data.asname,
+          reverse: data.reverse,
+          isMobile: data.mobile,
+          isProxy: data.proxy,
+          isHosting: data.hosting,
+        };
+      }
     }
-  } catch (error) {
-    return createFallbackResult(ip, error.message);
+  ];
+
+  for (const api of apis) {
+    try {
+      const response = await fetch(api.url, { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) continue;
+      const data = await response.json();
+      const parsed = api.parse(data);
+      if (parsed && parsed.lat != null && parsed.lon != null && !(parsed.lat === 0 && parsed.lon === 0)) {
+        return {
+          ...parsed,
+          riskIndicators: assessIPRisk({
+            ...parsed,
+            proxy: parsed.isProxy,
+            hosting: parsed.isHosting,
+            countryCode: parsed.countryCode,
+          }),
+          error: null,
+        };
+      }
+    } catch {
+      continue;
+    }
   }
+
+  return createFallbackResult(ip, 'All geolocation APIs failed');
 }
 
 /**

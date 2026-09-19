@@ -40,7 +40,11 @@ export default function WorldMap({ ipResults = [], height = '400px', showTrace =
     });
 
     // Add markers for each IP
-    const validIPs = ipResults.filter(ip => ip.lat && ip.lon && !ip.error);
+    const validIPs = ipResults.filter(ip => 
+      ip.lat != null && ip.lon != null && 
+      !(ip.lat === 0 && ip.lon === 0) && 
+      !ip.error
+    );
 
     if (validIPs.length === 0) return;
 

@@ -108,20 +108,31 @@ export default function EmailAnalyzer() {
                   </div>
                 )}
 
-                <div style={{ marginTop: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)' }}>
+                <div style={{ marginTop: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
                   <button className="btn btn-primary btn-sm" onClick={() => {
+                    navigate(`/threat/${result.id}`);
+                  }}>
+                    🛡️ Investigate in DFIR Console
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => {
                     dispatch({ type: 'SET_CURRENT_ANALYSIS', payload: result });
                     navigate('/reports');
                   }}>
-                    📋 View Full Report
+                    📋 Forensic Report
                   </button>
                   <button className="btn btn-ghost btn-sm" onClick={() => {
                     dispatch({ type: 'SET_CURRENT_ANALYSIS', payload: result });
                     navigate('/geo-tracer');
                   }}>
-                    🌍 See on Map
+                    🌍 Trace Route
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => {
+                    navigate('/cases');
+                  }}>
+                    📁 + Case
                   </button>
                 </div>
+
               </div>
             </div>
           </div>
