@@ -4,7 +4,9 @@
  * Manages JWT tokens, automatic Authorization headers, and comprehensive endpoints.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// Normalize VITE_API_URL: remove trailing slash, and remove redundant /api suffix if user entered it
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+const API_BASE_URL = rawApiUrl.endsWith('/api') ? rawApiUrl.slice(0, -4) : rawApiUrl;
 
 /**
  * Get stored JWT auth token
@@ -33,7 +35,8 @@ export function setAuthToken(token) {
  * Helper to make JSON HTTP requests with error handling and JWT injection
  */
 async function request(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE_URL}${cleanEndpoint}`;
   const token = getAuthToken();
 
   const headers = {
