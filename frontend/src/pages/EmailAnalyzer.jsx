@@ -38,6 +38,11 @@ export default function EmailAnalyzer() {
         <div className="analyzing-overlay">
           <div className="analyzing-spinner" />
           <div className="analyzing-text">Scanning email...</div>
+          {analysisStep && (
+            <div className="analyzing-step" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
+              {analysisStep}
+            </div>
+          )}
         </div>
       )}
 

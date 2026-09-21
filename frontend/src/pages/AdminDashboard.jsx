@@ -67,8 +67,38 @@ export default function AdminDashboard() {
             <span className="stat-label">Platform Users</span>
             <span className="stat-icon">👥</span>
           </div>
-          <div className="stat-number">{usersList.length || 4}</div>
-          <div className="stat-sub text-success">All accounts active</div>
+          <div className="stat-number">{usersList.length || 5}</div>
+          <div className="stat-sub text-success">
+            {usersList.filter((u) => u.status === 'active').length} accounts active
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Users Logged In</span>
+            <span className="stat-icon">🟢</span>
+          </div>
+          <div className="stat-number text-success">
+            {stats?.loggedInUsers ?? usersList.filter((u) => u.lastLogin).length}
+          </div>
+          <div className="stat-sub text-info">
+            {Math.round(
+              ((stats?.loggedInUsers ?? usersList.filter((u) => u.lastLogin).length) /
+                Math.max(usersList.length, 1)) *
+                100
+            )}% active engagement
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Total User Logins</span>
+            <span className="stat-icon">🔐</span>
+          </div>
+          <div className="stat-number text-primary">
+            {stats?.totalLogins ?? usersList.reduce((acc, u) => acc + (u.loginCount || 0), 0)}
+          </div>
+          <div className="stat-sub text-secondary">Cumulative logins recorded</div>
         </div>
 
         <div className="stat-card">
@@ -86,16 +116,7 @@ export default function AdminDashboard() {
             <span className="stat-icon">📁</span>
           </div>
           <div className="stat-number">{stats?.activeCases || 3}</div>
-          <div className="stat-sub text-warning">Active DFIR investigations</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card-header">
-            <span className="stat-label">Security Health</span>
-            <span className="stat-icon">✅</span>
-          </div>
-          <div className="stat-number text-success">100%</div>
-          <div className="stat-sub text-success">Zero security breaches</div>
+          <div className="stat-sub text-warning">Active DFIR cases</div>
         </div>
       </div>
 
@@ -105,7 +126,7 @@ export default function AdminDashboard() {
           <div className="module-icon-wrap">👥</div>
           <div className="module-content">
             <h3>User & Role Management</h3>
-            <p>Create analysts, configure RBAC permissions (Super Admin, Analyst, Investigator, Viewer), and reset passwords.</p>
+            <p>View all user details, login telemetry, configure RBAC roles (Super Admin, User, Analyst), and reset credentials.</p>
             <span className="module-link">Access User Directory →</span>
           </div>
         </div>
@@ -126,6 +147,91 @@ export default function AdminDashboard() {
             <p>Configure telemetry intervals, alerting channels, dark/light theme defaults, and defense rules.</p>
             <span className="module-link">Configure Settings →</span>
           </div>
+        </div>
+      </div>
+
+      {/* User Login Activity Telemetry Table */}
+      <div className="card full-width mb-4">
+        <div className="card-header">
+          <div>
+            <h3>Platform Users & Authentication Telemetry</h3>
+            <p className="card-subtitle">Real-time breakdown of user logins, role permissions, and active sessions</p>
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/admin/users')}>
+            👥 View Full User Directory →
+          </button>
+        </div>
+
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>User / Identity</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Login Count</th>
+                <th>Last Login Timestamp</th>
+                <th>Last Login IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usersList.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center p-4">Loading user records...</td>
+                </tr>
+              ) : (
+                usersList.map((u) => (
+                  <tr key={u.id}>
+                    <td>
+                      <div className="user-table-cell">
+                        <div className="user-table-avatar">{u.avatar || 'US'}</div>
+                        <div>
+                          <div className="font-semibold text-primary">{u.name}</div>
+                          <div className="font-mono text-xs text-secondary">{u.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`badge ${
+                        u.role === 'Super Admin'
+                          ? 'badge-purple'
+                          : u.role === 'Security Analyst'
+                          ? 'badge-info'
+                          : u.role === 'Investigator'
+                          ? 'badge-warning'
+                          : u.role === 'User'
+                          ? 'badge-success'
+                          : 'badge-secondary'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${u.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
+                        {u.status?.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-outline">
+                        {u.loginCount || 0} {u.loginCount === 1 ? 'Login' : 'Logins'}
+                      </span>
+                    </td>
+                    <td className="font-mono text-xs text-secondary">
+                      {u.lastLogin
+                        ? new Date(u.lastLogin).toLocaleString(undefined, {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })
+                        : 'Never logged in'}
+                    </td>
+                    <td className="font-mono text-xs text-muted">
+                      {u.lastLoginIp || (u.lastLogin ? '127.0.0.1' : 'None')}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

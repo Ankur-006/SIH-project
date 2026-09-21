@@ -420,6 +420,9 @@ def get_dashboard_stats():
                 vector_counts["malicious_attachments"] += 1
 
     active_cases = len([c for c in cases if c.get("status") != "Closed"])
+    total_users = len(users)
+    logged_in_users = len([u for u in users if u.get("lastLogin") is not None])
+    total_logins = sum([(u.get("loginCount") or 0) for u in users])
 
     # Threat breakdown chart data
     distribution = {
@@ -439,7 +442,9 @@ def get_dashboard_stats():
         "totalScans": total_scans or 28,
         "threatsDetected": threats_detected or 7,
         "activeCases": active_cases or len(cases) or 3,
-        "totalUsers": len(users) or 4,
+        "totalUsers": total_users or 4,
+        "loggedInUsers": logged_in_users,
+        "totalLogins": total_logins,
         "safeEmails": safe_emails or 19,
         "suspiciousEmails": suspicious_emails or 2,
         "recentThreats": recent_threats,
@@ -455,17 +460,16 @@ def get_dashboard_stats():
 # ----------------- SEED DEFAULT DATA -----------------
 
 def seed_default_data():
-    """Seed default super admin, analysts, welcome notifications, and audit log."""
+    """Seed default super admin, standard user, analysts, welcome notifications, and audit log."""
+    def _hash(p):
+        return bcrypt.hashpw(p.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+    now_str = datetime.now(timezone.utc).isoformat()
+
     with _lock:
         existing_users = users_table.all()
 
     if not existing_users:
-        # Generate bcrypt hashes directly
-        def _hash(p):
-            return bcrypt.hashpw(p.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-        now_str = datetime.now(timezone.utc).isoformat()
-
         default_users = [
             {
                 "id": "usr-admin-01",
@@ -479,9 +483,26 @@ def seed_default_data():
                 "phone": "+1 (555) 019-2834",
                 "createdAt": now_str,
                 "lastLogin": now_str,
+                "loginCount": 1,
+                "lastLoginIp": "127.0.0.1",
             },
             {
-                "id": "usr-analyst-02",
+                "id": "usr-user-02",
+                "email": "user@mailguard.com",
+                "name": "Standard User",
+                "passwordHash": _hash("user123"),
+                "role": "User",
+                "avatar": "SU",
+                "status": "active",
+                "department": "Email Security & Threat Operations",
+                "phone": "+1 (555) 019-4481",
+                "createdAt": now_str,
+                "lastLogin": None,
+                "loginCount": 0,
+                "lastLoginIp": None,
+            },
+            {
+                "id": "usr-analyst-03",
                 "email": "analyst@mailguard.com",
                 "name": "Sarah Connor",
                 "passwordHash": _hash("analyst123"),
@@ -492,9 +513,11 @@ def seed_default_data():
                 "phone": "+1 (555) 019-5821",
                 "createdAt": now_str,
                 "lastLogin": now_str,
+                "loginCount": 1,
+                "lastLoginIp": "127.0.0.1",
             },
             {
-                "id": "usr-invest-03",
+                "id": "usr-invest-04",
                 "email": "investigator@mailguard.com",
                 "name": "Marcus Wright",
                 "passwordHash": _hash("investigator123"),
@@ -505,19 +528,23 @@ def seed_default_data():
                 "phone": "+1 (555) 019-9942",
                 "createdAt": now_str,
                 "lastLogin": now_str,
+                "loginCount": 1,
+                "lastLoginIp": "127.0.0.1",
             },
             {
-                "id": "usr-demo-04",
+                "id": "usr-demo-05",
                 "email": "demo@mailguard.com",
                 "name": "Demo User",
                 "passwordHash": _hash("demo123"),
-                "role": "Viewer",
+                "role": "User",
                 "avatar": "DU",
                 "status": "active",
                 "department": "Security Awareness",
                 "phone": "+1 (555) 019-1100",
                 "createdAt": now_str,
                 "lastLogin": now_str,
+                "loginCount": 1,
+                "lastLoginIp": "127.0.0.1",
             },
         ]
 
@@ -530,7 +557,7 @@ def seed_default_data():
             actor_email="system@mailguard.internal",
             actor_name="System Initialization",
             action="Platform Initialized",
-            details="MailGuard Forensic Database initialized with standard security roles and default analysts.",
+            details="MailGuard Forensic Database initialized with Super Admin and Standard User accounts.",
             category="System"
         )
 
@@ -552,3 +579,34 @@ def seed_default_data():
             message="Forensic engines, IP Geolocation, and Domain WHOIS lookups operational at 100% capacity.",
             ntype="info"
         )
+    else:
+        # If database already existed, ensure user@mailguard.com exists and all users have loginCount fields
+        with _lock:
+            U = Query()
+            user_exists = users_table.search(U.email == "user@mailguard.com")
+            if not user_exists:
+                users_table.insert({
+                    "id": "usr-user-02",
+                    "email": "user@mailguard.com",
+                    "name": "Standard User",
+                    "passwordHash": _hash("user123"),
+                    "role": "User",
+                    "avatar": "SU",
+                    "status": "active",
+                    "department": "Email Security & Threat Operations",
+                    "phone": "+1 (555) 019-4481",
+                    "createdAt": now_str,
+                    "lastLogin": None,
+                    "loginCount": 0,
+                    "lastLoginIp": None,
+                })
+            
+            # Backfill loginCount and lastLoginIp if missing
+            for u in users_table.all():
+                updates = {}
+                if "loginCount" not in u:
+                    updates["loginCount"] = 1 if u.get("lastLogin") else 0
+                if "lastLoginIp" not in u and u.get("lastLogin"):
+                    updates["lastLoginIp"] = "127.0.0.1"
+                if updates:
+                    users_table.update(updates, U.id == u["id"])

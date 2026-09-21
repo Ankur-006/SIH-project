@@ -20,12 +20,25 @@ export default function AuthLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shakeForm, setShakeForm] = useState(false);
 
+  const [selectedRole, setSelectedRole] = useState('admin');
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate]);
+
+  const selectRole = (role) => {
+    setSelectedRole(role);
+    if (role === 'admin') {
+      setEmail('admin@mailguard.com');
+      setPassword('admin123');
+    } else {
+      setEmail('user@mailguard.com');
+      setPassword('user123');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -98,22 +111,8 @@ export default function AuthLoginPage() {
             </div>
           </div>
 
-          <div className="auth-hero-stats">
-            <div className="auth-stat">
-              <span className="auth-stat-value">99.7%</span>
-              <span className="auth-stat-label">Detection Rate</span>
-            </div>
-            <div className="auth-stat-divider" />
-            <div className="auth-stat">
-              <span className="auth-stat-value">&lt;2s</span>
-              <span className="auth-stat-label">Scan Time</span>
-            </div>
-            <div className="auth-stat-divider" />
-            <div className="auth-stat">
-              <span className="auth-stat-value">24/7</span>
-              <span className="auth-stat-label">Protection</span>
-            </div>
-          </div>
+          {/* Stat area kept empty as requested */}
+          <div className="auth-hero-stats" />
         </div>
 
         {/* Floating particles */}
@@ -138,6 +137,24 @@ export default function AuthLoginPage() {
             <p>Sign in to your MailGuard account</p>
           </div>
 
+          {/* Dual Role Selector: Admin or Standard User */}
+          <div className="auth-role-tabs">
+            <button
+              type="button"
+              className={`auth-role-tab ${selectedRole === 'admin' ? 'active' : ''}`}
+              onClick={() => selectRole('admin')}
+            >
+              🛡️ Administrator
+            </button>
+            <button
+              type="button"
+              className={`auth-role-tab ${selectedRole === 'user' ? 'active' : ''}`}
+              onClick={() => selectRole('user')}
+            >
+              👤 Standard User
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit} className="auth-form">
             {/* Email */}
             <div className="auth-field">
@@ -147,7 +164,7 @@ export default function AuthLoginPage() {
                 <input
                   id="auth-email"
                   type="email"
-                  placeholder="admin@mailguard.com"
+                  placeholder={selectedRole === 'admin' ? 'admin@mailguard.com' : 'user@mailguard.com'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSubmitting}
@@ -182,7 +199,7 @@ export default function AuthLoginPage() {
               </div>
             </div>
 
-            {/* Options Row */}
+            {/* Options Row (Forgot password removed) */}
             <div className="auth-options">
               <label className="auth-checkbox">
                 <input
@@ -193,9 +210,6 @@ export default function AuthLoginPage() {
                 <span className="auth-checkbox-mark" />
                 Remember me
               </label>
-              <a href="#" className="auth-forgot-link" onClick={(e) => e.preventDefault()}>
-                Forgot password?
-              </a>
             </div>
 
             {/* Error */}
@@ -219,25 +233,44 @@ export default function AuthLoginPage() {
                 </span>
               ) : (
                 <>
-                  <span>🔐</span> Sign In to MailGuard
+                  <span>🔐</span> Sign In as {selectedRole === 'admin' ? 'Admin' : 'User'}
                 </>
               )}
             </button>
           </form>
 
-          {/* Demo Hint */}
+          {/* Demo Hint with both Admin and User Options */}
           <div className="auth-demo-hint">
             <div className="auth-demo-title">
-              <span>💡</span> Demo Credentials
+              <span>💡</span> One-Click Demo Logins
             </div>
-            <div className="auth-demo-credentials">
-              <div className="auth-demo-row">
-                <span className="auth-demo-label">Email:</span>
-                <code onClick={() => setEmail('admin@mailguard.com')}>admin@mailguard.com</code>
+            <div className="auth-demo-credentials-grid">
+              <div
+                className={`auth-demo-role-card ${selectedRole === 'admin' ? 'selected' : ''}`}
+                onClick={() => selectRole('admin')}
+              >
+                <div className="auth-demo-card-top">
+                  <span className="auth-demo-role-pill admin">🛡️ Admin</span>
+                  <span className="auth-demo-click-hint">Click to Fill</span>
+                </div>
+                <div className="auth-demo-account-info">
+                  <code>admin@mailguard.com</code>
+                  <span className="auth-demo-scope">Full Admin & User Directory</span>
+                </div>
               </div>
-              <div className="auth-demo-row">
-                <span className="auth-demo-label">Password:</span>
-                <code onClick={() => setPassword('admin123')}>admin123</code>
+
+              <div
+                className={`auth-demo-role-card ${selectedRole === 'user' ? 'selected' : ''}`}
+                onClick={() => selectRole('user')}
+              >
+                <div className="auth-demo-card-top">
+                  <span className="auth-demo-role-pill user">👤 User</span>
+                  <span className="auth-demo-click-hint">Click to Fill</span>
+                </div>
+                <div className="auth-demo-account-info">
+                  <code>user@mailguard.com</code>
+                  <span className="auth-demo-scope">Email Analyzer, IP, Cases, Reports</span>
+                </div>
               </div>
             </div>
           </div>

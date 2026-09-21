@@ -200,11 +200,10 @@ export default function CaseManagement() {
                           <select
                             className="select"
                             style={{ fontSize: '0.72rem', padding: '3px 6px', maxWidth: '140px' }}
-                            defaultValue=""
+                            value=""
                             onChange={(e) => {
                               if (e.target.value) {
                                 addEmailToCase(e.target.value, email.id);
-                                e.target.value = "";
                               }
                             }}
                           >

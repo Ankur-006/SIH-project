@@ -43,9 +43,15 @@ export default function Dashboard() {
           api.getReports().catch(() => ({ reports: [] })),
         ]);
 
-        if (mounted) {
+          if (mounted) {
           if (statsData) setDbStats(statsData);
-          if (reportsData && reportsData.reports) setReports(reportsData.reports);
+          if (reportsData) {
+            // Handle both { reports: [...] } and direct array response shapes
+            const reportsArr = Array.isArray(reportsData)
+              ? reportsData
+              : reportsData.reports || [];
+            if (reportsArr.length > 0) setReports(reportsArr);
+          }
         }
       } catch (err) {
         console.error('Failed to load dashboard telemetry', err);
@@ -339,26 +345,26 @@ export default function Dashboard() {
         <StatsCard
           title="Threats Intercepted"
           value={threatsCount}
-          change={`${Math.round((threatsCount / Math.max(totalScans, 1)) * 100)}% detection rate`}
-          trend={threatsCount > 5 ? 'up' : 'down'}
+          change={`${threatsCount} threats flagged`}
+          trend="down"
           icon="🚨"
-          color="red"
+          color="danger"
         />
         <StatsCard
           title="Active Cases"
           value={activeCases}
-          change="All within SLA"
+          change="Within SLA target"
           trend="neutral"
           icon="📁"
-          color="amber"
+          color="warning"
         />
         <StatsCard
-          title="Security Analysts"
+          title="Platform Users"
           value={totalUsers}
-          change="Operational"
-          trend="up"
+          change="Registered accounts"
+          trend="neutral"
           icon="👥"
-          color="emerald"
+          color="purple"
         />
       </div>
 

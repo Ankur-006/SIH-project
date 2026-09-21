@@ -67,17 +67,22 @@ async def login(req: LoginRequest, request: Request):
             detail="Invalid email or password.",
         )
 
-    # Update last login time
+    # Update last login time and login count
     now_iso = datetime.now(timezone.utc).isoformat()
     client_ip = request.client.host if request.client else "127.0.0.1"
-    update_user(user["id"], {"lastLogin": now_iso})
+    new_login_count = (user.get("loginCount") or 0) + 1
+    update_user(user["id"], {
+        "lastLogin": now_iso,
+        "loginCount": new_login_count,
+        "lastLoginIp": client_ip,
+    })
 
     # Save audit log
     save_audit_log(
         actor_email=email,
         actor_name=user.get("name", "User"),
         action="User Logged In",
-        details=f"User authenticated successfully via credentials (Role: {user.get('role')})",
+        details=f"User authenticated successfully (Role: {user.get('role')}, Login #{new_login_count})",
         ip_address=client_ip,
         category="Auth"
     )
@@ -93,6 +98,8 @@ async def login(req: LoginRequest, request: Request):
 
     safe_user = {k: v for k, v in user.items() if k != "passwordHash"}
     safe_user["lastLogin"] = now_iso
+    safe_user["loginCount"] = new_login_count
+    safe_user["lastLoginIp"] = client_ip
 
     return {
         "token": access_token,

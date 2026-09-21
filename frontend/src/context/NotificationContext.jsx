@@ -17,6 +17,7 @@ export function NotificationProvider({ children }) {
 
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
+    setLoading(true);
     try {
       const res = await api.notifications.list();
       if (res && res.notifications) {
@@ -25,6 +26,8 @@ export function NotificationProvider({ children }) {
       }
     } catch {
       // ignore network errors silently
+    } finally {
+      setLoading(false);
     }
   }, [isAuthenticated]);
 

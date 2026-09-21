@@ -44,9 +44,9 @@ export default function ForensicReport() {
   const defang = (str) => {
     if (!str) return '';
     return str
-      .replace(/https?:\/\//gi, (m) => (m.toLowerCase().startsWith('https') ? 'hxxps://' : 'hxxp://'))
-      .replace(/\./g, '[.]')
-      .replace(/:\/\//g, '[://]');
+      .replace(/https:\/\//gi, 'hxxps[://]')
+      .replace(/http:\/\//gi, 'hxxp[://]')
+      .replace(/\./g, '[.]');
   };
 
   const threat = result?.threatAssessment;

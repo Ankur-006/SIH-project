@@ -60,7 +60,7 @@ export default function LoginPage() {
       const domain = email.split('@')[1];
       setImapServer(`imap.${domain}`);
     }
-  }, [email]);
+  }, [email, provider]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

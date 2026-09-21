@@ -8,7 +8,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { showToast } from '../components/Toast';
 
-const ROLES = ['Super Admin', 'Security Analyst', 'Investigator', 'Viewer'];
+const ROLES = ['Super Admin', 'Security Analyst', 'Investigator', 'User', 'Viewer'];
 const STATUSES = ['active', 'suspended'];
 
 export default function UserManagement() {
@@ -22,6 +22,7 @@ export default function UserManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   // Form states
@@ -31,6 +32,8 @@ export default function UserManagement() {
     password: '',
     role: 'Security Analyst',
     status: 'active',
+    department: '',
+    phone: '',
   });
   const [newPassword, setNewPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -152,13 +155,20 @@ export default function UserManagement() {
     }
   };
 
+  const openDetail = (u) => {
+    setSelectedUser(u);
+    setShowDetailModal(true);
+  };
+
   const openEdit = (u) => {
     setSelectedUser(u);
     setFormData({
       name: u.name || '',
       email: u.email || '',
-      role: u.role || 'Security Analyst',
+      role: u.role || 'User',
       status: u.status || 'active',
+      department: u.department || '',
+      phone: u.phone || '',
       password: '',
     });
     setShowEditModal(true);
@@ -175,10 +185,14 @@ export default function UserManagement() {
     const matchSearch =
       (u.name || '').toLowerCase().includes(q) ||
       (u.email || '').toLowerCase().includes(q) ||
-      (u.role || '').toLowerCase().includes(q);
+      (u.role || '').toLowerCase().includes(q) ||
+      (u.department || '').toLowerCase().includes(q);
     const matchRole = roleFilter === 'All' || u.role === roleFilter;
     return matchSearch && matchRole;
   });
+
+  const totalLoginsCount = users.reduce((acc, u) => acc + (u.loginCount || 0), 0);
+  const loggedInUsersCount = users.filter((u) => u.lastLogin).length;
 
   return (
     <div className="users-page">
@@ -187,13 +201,58 @@ export default function UserManagement() {
         <div className="page-header-info">
           <h2>👥 Identity & Access Management (RBAC)</h2>
           <p>
-            Manage security analysts, configure forensic investigation privileges, and enforce account credentials.
+            Platform user directory, authentication telemetry, and granular access controls for administrators and standard users.
           </p>
         </div>
         <div className="page-header-actions">
           <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
             + Add New User
           </button>
+        </div>
+      </div>
+
+      {/* Admin Login Visibility & User Metrics */}
+      <div className="stats-grid mb-4">
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Total Platform Users</span>
+            <span className="stat-icon">👥</span>
+          </div>
+          <div className="stat-number">{users.length}</div>
+          <div className="stat-sub text-success">
+            {users.filter((u) => u.status === 'active').length} active accounts
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Users Logged In</span>
+            <span className="stat-icon">🟢</span>
+          </div>
+          <div className="stat-number text-success">{loggedInUsersCount}</div>
+          <div className="stat-sub text-info">
+            {Math.round((loggedInUsersCount / Math.max(users.length, 1)) * 100)}% of total userbase
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Total Platform Logins</span>
+            <span className="stat-icon">🔐</span>
+          </div>
+          <div className="stat-number text-primary">{totalLoginsCount}</div>
+          <div className="stat-sub text-secondary">Cumulative authentication events</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Standard Users</span>
+            <span className="stat-icon">👤</span>
+          </div>
+          <div className="stat-number text-warning">
+            {users.filter((u) => u.role === 'User' || u.role === 'Viewer').length}
+          </div>
+          <div className="stat-sub text-muted">Email analysis scope</div>
         </div>
       </div>
 
@@ -204,7 +263,7 @@ export default function UserManagement() {
           <input
             type="text"
             className="intel-input"
-            placeholder="Search by name, email or role..."
+            placeholder="Search by name, email, department or role..."
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
           />
@@ -227,15 +286,22 @@ export default function UserManagement() {
 
       {/* Users Table */}
       <div className="card full-width">
+        <div className="card-header">
+          <div>
+            <h3>User Directory & Login Telemetry</h3>
+            <p className="card-subtitle">Complete records of platform users, authentication counts, and access roles</p>
+          </div>
+        </div>
+
         <div className="table-responsive">
           <table className="data-table">
             <thead>
               <tr>
-                <th>User / Analyst</th>
+                <th>User / Identity</th>
                 <th>Role</th>
                 <th>Status</th>
-                <th>Department</th>
-                <th>Last Login</th>
+                <th>Department & Contact</th>
+                <th>Login Telemetry</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -257,6 +323,7 @@ export default function UserManagement() {
                         <div>
                           <div className="font-semibold text-primary">{u.name}</div>
                           <div className="font-mono text-xs text-secondary">{u.email}</div>
+                          <div className="font-mono text-xs text-muted" style={{ fontSize: '0.68rem' }}>ID: {u.id}</div>
                         </div>
                       </div>
                     </td>
@@ -268,6 +335,8 @@ export default function UserManagement() {
                           ? 'badge-info'
                           : u.role === 'Investigator'
                           ? 'badge-warning'
+                          : u.role === 'User'
+                          ? 'badge-success'
                           : 'badge-secondary'
                       }`}>
                         {u.role}
@@ -278,12 +347,46 @@ export default function UserManagement() {
                         {u.status?.toUpperCase()}
                       </span>
                     </td>
-                    <td className="text-sm text-secondary">{u.department || 'DFIR Operations'}</td>
-                    <td className="font-mono text-xs text-secondary">
-                      {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}
+                    <td>
+                      <div className="text-sm text-primary">{u.department || 'Security Operations'}</div>
+                      <div className="text-xs text-secondary">{u.phone || 'No phone set'}</div>
+                    </td>
+                    <td>
+                      <div className="login-telemetry-cell">
+                        <div className="font-semibold text-xs text-primary">
+                          <span className="badge badge-outline" style={{ marginRight: '4px' }}>
+                            {u.loginCount || 0} {u.loginCount === 1 ? 'Login' : 'Logins'}
+                          </span>
+                          {u.lastLogin ? (
+                            <span className="text-success text-xs">● Active</span>
+                          ) : (
+                            <span className="text-muted text-xs">○ Never</span>
+                          )}
+                        </div>
+                        <div className="font-mono text-xs text-secondary mt-1">
+                          {u.lastLogin
+                            ? new Date(u.lastLogin).toLocaleString(undefined, {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              })
+                            : 'No logins recorded'}
+                        </div>
+                        {u.lastLoginIp && (
+                          <div className="font-mono text-xs text-muted" style={{ fontSize: '0.68rem' }}>
+                            IP: {u.lastLoginIp}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <div className="btn-group">
+                        <button
+                          className="btn btn-secondary btn-xs"
+                          onClick={() => openDetail(u)}
+                          title="View Full User Details"
+                        >
+                          👁️ Details
+                        </button>
                         <button
                           className="btn btn-secondary btn-xs"
                           onClick={() => openEdit(u)}
@@ -529,6 +632,157 @@ export default function UserManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: FULL USER DETAILS DOSSIER */}
+      {showDetailModal && selectedUser && (
+        <div className="search-modal-backdrop" onClick={() => setShowDetailModal(false)}>
+          <div className="modal-dialog-card user-detail-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
+            <div className="card-header">
+              <div className="user-detail-header-wrap">
+                <div className="user-detail-avatar-lg">{selectedUser.avatar || 'US'}</div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{selectedUser.name}</h3>
+                  <p className="font-mono text-xs text-secondary" style={{ margin: '2px 0 0' }}>{selectedUser.email}</p>
+                </div>
+              </div>
+              <button className="btn-close" onClick={() => setShowDetailModal(false)}>✕</button>
+            </div>
+
+            <div className="user-detail-body">
+              <div className="user-detail-badges mb-3">
+                <span className={`badge ${
+                  selectedUser.role === 'Super Admin'
+                    ? 'badge-purple'
+                    : selectedUser.role === 'Security Analyst'
+                    ? 'badge-info'
+                    : selectedUser.role === 'Investigator'
+                    ? 'badge-warning'
+                    : selectedUser.role === 'User'
+                    ? 'badge-success'
+                    : 'badge-secondary'
+                }`}>
+                  Role: {selectedUser.role}
+                </span>
+                <span className={`badge ${selectedUser.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
+                  Status: {selectedUser.status?.toUpperCase()}
+                </span>
+                <span className="badge badge-outline">
+                  {selectedUser.loginCount || 0} Total Logins
+                </span>
+              </div>
+
+              <div className="user-detail-grid">
+                <div className="user-detail-item">
+                  <span className="user-detail-label">User Identifier:</span>
+                  <span className="user-detail-value font-mono text-xs">{selectedUser.id}</span>
+                </div>
+
+                <div className="user-detail-item">
+                  <span className="user-detail-label">Department / Unit:</span>
+                  <span className="user-detail-value">{selectedUser.department || 'Email Security & Operations'}</span>
+                </div>
+
+                <div className="user-detail-item">
+                  <span className="user-detail-label">Phone / Contact:</span>
+                  <span className="user-detail-value">{selectedUser.phone || 'Not configured'}</span>
+                </div>
+
+                <div className="user-detail-item">
+                  <span className="user-detail-label">Total Authentications:</span>
+                  <span className="user-detail-value text-primary font-semibold">
+                    {selectedUser.loginCount || 0} {selectedUser.loginCount === 1 ? 'session' : 'sessions'}
+                  </span>
+                </div>
+
+                <div className="user-detail-item">
+                  <span className="user-detail-label">Last Login Timestamp:</span>
+                  <span className="user-detail-value">
+                    {selectedUser.lastLogin
+                      ? new Date(selectedUser.lastLogin).toLocaleString()
+                      : 'Never logged in'}
+                  </span>
+                </div>
+
+                <div className="user-detail-item">
+                  <span className="user-detail-label">Last Login Client IP:</span>
+                  <span className="user-detail-value font-mono text-xs">
+                    {selectedUser.lastLoginIp || (selectedUser.lastLogin ? '127.0.0.1' : 'None')}
+                  </span>
+                </div>
+
+                <div className="user-detail-item">
+                  <span className="user-detail-label">Account Created:</span>
+                  <span className="user-detail-value">
+                    {selectedUser.createdAt
+                      ? new Date(selectedUser.createdAt).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })
+                      : 'Initial Provisioning'}
+                  </span>
+                </div>
+
+                <div className="user-detail-item">
+                  <span className="user-detail-label">Last Profile Update:</span>
+                  <span className="user-detail-value">
+                    {selectedUser.updatedAt
+                      ? new Date(selectedUser.updatedAt).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })
+                      : 'No changes'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="user-detail-scope-box mt-3">
+                <span className="user-detail-scope-title">🔐 Assigned Platform Capabilities:</span>
+                <p className="user-detail-scope-desc">
+                  {selectedUser.role === 'Super Admin'
+                    ? 'Super Administrator: Full SOC administration, user directory governance, DFIR audit trails, platform settings, and all email threat analysis modules.'
+                    : selectedUser.role === 'Security Analyst'
+                    ? 'Security Analyst: Advanced threat hunting, header inspection, forensic report export, IP tracing, and incident triage.'
+                    : selectedUser.role === 'Investigator'
+                    ? 'Investigator: Digital forensics evidence collection, case management triage, threat hunting, and report generation.'
+                    : 'Standard User: Basic email threat analysis (Email Analyzer, IP Geolocation Tracer, Case Management, Threat History Reports, and Mailbox Integration). Administrative modules are strictly restricted.'}
+                </p>
+              </div>
+
+              <div className="modal-actions mt-4">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowDetailModal(false)}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    openResetPassword(selectedUser);
+                  }}
+                >
+                  🔑 Reset Password
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    openEdit(selectedUser);
+                  }}
+                >
+                  ✏️ Edit User
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

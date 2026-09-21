@@ -28,7 +28,20 @@ export default function URLIntelligence() {
 
   useEffect(() => {
     if (initialUrl) {
-      handleAnalyze(initialUrl);
+      // Inline the analysis to avoid stale closure over handleAnalyze
+      (async () => {
+        setError('');
+        setLoading(true);
+        setResult(null);
+        try {
+          const data = await api.url.analyze(initialUrl.trim());
+          setResult(data);
+        } catch (err) {
+          setError(err.message || 'Failed to inspect URL.');
+        } finally {
+          setLoading(false);
+        }
+      })();
     }
   }, [initialUrl]);
 

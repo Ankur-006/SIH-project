@@ -247,7 +247,10 @@ export default function InboxSecurity() {
           const fromName = email.parsed?.from?.name || '';
           const fromEmail = email.parsed?.from?.email || 'Unknown sender';
           const date = email.parsed?.date || email.timestamp;
-          const recommendation = email.threatAssessment?.recommendation || '';
+          const rawRecommendation = email.threatAssessment?.recommendation;
+          const recommendation = typeof rawRecommendation === 'string'
+            ? rawRecommendation
+            : rawRecommendation?.text || rawRecommendation?.action || '';
 
           return (
             <div

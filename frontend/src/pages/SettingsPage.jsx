@@ -36,7 +36,7 @@ export default function SettingsPage() {
       }
     }
     loadSettings();
-  }, []);
+  }, [theme, setTheme]);
 
   const handleSave = async (updated) => {
     const next = { ...settings, ...updated };

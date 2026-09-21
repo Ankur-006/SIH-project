@@ -22,9 +22,14 @@ export default function GeoTracer() {
     if (urlIP) {
       (async () => {
         setIsLooking(true);
-        const result = await lookupIP(urlIP.trim());
-        setManualResults([result]);
-        setIsLooking(false);
+        try {
+          const result = await lookupIP(urlIP.trim());
+          setManualResults([result]);
+        } catch (err) {
+          console.error('IP lookup failed:', err);
+        } finally {
+          setIsLooking(false);
+        }
       })();
     }
   }, [urlIP]);

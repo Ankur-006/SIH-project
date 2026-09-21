@@ -546,32 +546,48 @@ code, .mono {
 
 .stat-info {
   flex: 1;
-}
-
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  display: flex;
+  flex-direction: column;
 }
 
 .stat-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  margin-top: var(--space-xs);
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
 .stat-trend {
   font-size: 0.75rem;
   font-weight: 600;
-  margin-top: var(--space-xs);
+  margin-top: 6px;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 .stat-trend.up { color: var(--success); }
 .stat-trend.down { color: var(--danger); }
+.stat-trend.neutral { color: var(--text-muted); }
+
+.stat-arrow {
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.stat-dot {
+  font-size: 0.65rem;
+  margin-right: 2px;
+}
 
 /* ── Chart Containers ── */
 .chart-container {
@@ -3607,6 +3623,87 @@ code, .mono {
   gap: 6px;
 }
 
+.auth-demo-credentials-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.auth-demo-role-card {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-demo-role-card:hover {
+  border-color: var(--accent-blue);
+  background: rgba(37, 99, 235, 0.08);
+  transform: translateY(-1px);
+}
+
+.auth-demo-role-card.selected {
+  border-color: var(--accent-blue);
+  background: rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 1px var(--accent-blue);
+}
+
+.auth-demo-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auth-demo-role-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.auth-demo-role-pill.admin {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.auth-demo-role-pill.user {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.auth-demo-click-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.auth-demo-account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.auth-demo-account-info code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.auth-demo-scope {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
 .auth-demo-row {
   display: flex;
   align-items: center;
@@ -3632,6 +3729,45 @@ code, .mono {
 
 .auth-demo-row code:hover {
   background: rgba(37, 99, 235, 0.15);
+}
+
+/* Dual Role Switcher Tabs */
+.auth-role-tabs {
+  display: flex;
+  background: var(--bg-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  margin-bottom: var(--space-lg);
+  gap: 4px;
+}
+
+.auth-role-tab {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.auth-role-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.auth-role-tab.active {
+  background: var(--accent-blue);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
 }
 
 .auth-form-footer {
@@ -5216,6 +5352,91 @@ code, .mono {
   color: var(--warning);
   padding: 2px 8px;
   border-radius: var(--radius-full);
+}
+
+/* ── User Detail Dossier Modal & Login Telemetry ── */
+.user-detail-header-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.user-detail-avatar-lg {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.15rem;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.user-detail-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.user-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.user-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.user-detail-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.user-detail-value {
+  font-size: 0.86rem;
+  color: var(--text-primary);
+}
+
+.user-detail-scope-box {
+  padding: var(--space-md);
+  background: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.user-detail-scope-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.user-detail-scope-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.login-telemetry-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 /* ── Animations ── */

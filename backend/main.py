@@ -25,17 +25,21 @@ from routers.domain import router as domain_router
 from routers.url import router as url_router
 from data.database import seed_default_data
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app):
+    seed_default_data()
+    yield
+
 app = FastAPI(
     title="MailGuard Forensic Intelligence API",
     description="Backend API for email threat detection, header parsing, NLP analysis, and geolocation intelligence.",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
-
-@app.on_event("startup")
-async def startup_event():
-    seed_default_data()
 
 # Enable CORS for frontend communications
 app.add_middleware(

@@ -28,7 +28,20 @@ export default function DomainIntelligence() {
 
   useEffect(() => {
     if (initialQuery) {
-      handleLookup(initialQuery);
+      // Inline the lookup to avoid stale closure over handleLookup
+      (async () => {
+        setError('');
+        setLoading(true);
+        setResult(null);
+        try {
+          const data = await api.domain.lookup(initialQuery.trim());
+          setResult(data);
+        } catch (err) {
+          setError(err.message || 'Failed to lookup domain.');
+        } finally {
+          setLoading(false);
+        }
+      })();
     }
   }, [initialQuery]);
 
